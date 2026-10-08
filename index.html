@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Perencanaan FTTH, Tiang, & ODP</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- LOGIN OVERLAY -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100">
+            <div class="bg-gradient-to-r from-blue-700 to-indigo-800 p-8 text-white text-center relative">
+                <div class="w-16 h-16 bg-white/10 rounded-2xl mx-auto flex items-center justify-center backdrop-blur-sm border border-white/20 mb-4 shadow-inner">
+                    <i class="fa-solid fa-network-wired text-3xl text-cyan-300"></i>
+                </div>
+                <h2 class="text-2xl font-bold tracking-tight">FTTH & ODP Manager</h2>
+                <p class="text-xs text-blue-200 mt-1">Sistem Perencanaan Kabel, Tiang, ODP, & Rumah</p>
+            </div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)" class="p-8 space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="login-username" required placeholder="Contoh: admin"
+                            class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="login-password" required placeholder="••••••••"
+                            class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                </div>
+
+                <div id="login-error" class="hidden text-xs text-red-500 font-medium text-center bg-red-50 p-2.5 rounded-lg border border-red-100"></div>
+
+                <button type="submit" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 transition duration-200 text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Masuk ke Dashboard
+                </button>
+                <div class="text-center pt-2">
+                    <p class="text-xs text-slate-400">Default: username <code class="text-blue-600 font-semibold">admin</code>, password <code class="text-blue-600 font-semibold">ftth2026</code></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="hidden flex-col min-h-screen flex-grow">
+        <!-- HEADER -->
+        <header class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm border border-white/20">
+                        <i class="fa-solid fa-tower-broadcast text-2xl text-cyan-300"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight">FTTH Infrastructure Dashboard</h1>
+                        <p class="text-xs text-blue-200">Manajemen Perencanaan Kabel, Tiang, ODP, & Rumah (HP)</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 no-print">
+                    <button onclick="openModal()" class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-semibold px-4 py-2.5 rounded-xl shadow-lg transition duration-200 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-plus-circle"></i> Input Perencanaan Baru
+                    </button>
+                    <button onclick="window.print()" class="bg-white/10 hover:bg-white/20 text-white px-3.5 py-2.5 rounded-xl border border-white/20 transition duration-200 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-print"></i> Cetak Laporan
+                    </button>
+                    <button onclick="handleLogout()" class="bg-red-500/20 hover:bg-red-500 text-red-100 hover:text-white px-3.5 py-2.5 rounded-xl border border-red-400/30 transition duration-200 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-right-from-bracket"></i> Keluar
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            
+            <!-- Toast Notifications Container -->
+            <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+            <!-- STATISTICS CARDS -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between hover:shadow-md transition">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Proyek / Cluster</p>
+                        <h3 id="stat-total-project" class="text-3xl font-bold text-slate-900 mt-2">0</h3>
+                        <span class="text-xs text-blue-600 font-medium mt-1 inline-flex items-center gap-1">
+                            <i class="fa-solid fa-folder-open"></i> Wilayah perencanaan
+                        </span>
+                    </div>
+                    <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between hover:shadow-md transition">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Tiang & ODP</p>
+                        <h3 id="stat-total-pole-odp" class="text-2xl font-bold text-slate-900 mt-2">0 / 0</h3>
+                        <span class="text-xs text-purple-600 font-medium mt-1 inline-flex items-center gap-1">
+                            <i class="fa-solid fa-tower-cell"></i> Tiang (Pole) / ODP
+                        </span>
+                    </div>
+                    <div class="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-box-archive"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between hover:shadow-md transition">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Kabel & Rumah (HP)</p>
+                        <h3 id="stat-total-cable-hp" class="text-xl font-bold text-slate-900 mt-2">0 m / 0 HP</h3>
+                        <span class="text-xs text-cyan-600 font-medium mt-1 inline-flex items-center gap-1">
+                            <i class="fa-solid fa-route"></i> Panjang kabel & Home pass
+                        </span>
+                    </div>
+                    <div class="w-14 h-14 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-house-chimney-user"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between hover:shadow-md transition">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Estimasi Biaya</p>
+                        <h3 id="stat-total-budget" class="text-lg font-bold text-slate-900 mt-2">Rp 0</h3>
+                        <span class="text-xs text-emerald-600 font-medium mt-1 inline-flex items-center gap-1">
+                            <i class="fa-solid fa-wallet"></i> Akumulasi anggaran
+                        </span>
+                    </div>
+                    <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CHARTS SECTION -->
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 lg:col-span-2 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-blue-600"></i> Jumlah Rumah (Home Pass) & ODP per Cluster
+                        </h2>
+                        <span class="text-xs text-slate-400">Komparasi Infrastruktur</span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="infrastructureChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-indigo-600"></i> Distribusi Kapasitas ODP
+                        </h2>
+                        <span class="text-xs text-slate-400">Statistik Port</span>
+                    </div>
+                    <div class="relative h-64 w-full flex items-center justify-center">
+                        <canvas id="odpChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DATA TABLE SECTION -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Data Perencanaan Kabel, Tiang, ODP, & Rumah</h2>
+                        <p class="text-xs text-slate-500">Kelola rincian teknis lengkap jaringan fiber optik FTTH.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto no-print">
+                        <div class="relative flex-grow sm:flex-grow-0">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-search"></i>
+                            </span>
+                            <input type="text" id="search-input" onkeyup="filterData()" placeholder="Cari pembuat / cluster / ODP..." 
+                                class="w-full sm:w-64 pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                        </div>
+                        <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-file-excel"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold border-b border-slate-200">
+                                <th class="py-3.5 px-6">No</th>
+                                <th class="py-3.5 px-6">Pembuat & Tanggal</th>
+                                <th class="py-3.5 px-6">Nama Proyek / Cluster</th>
+                                <th class="py-3.5 px-6">Kabel (m)</th>
+                                <th class="py-3.5 px-6">Tiang (Batang)</th>
+                                <th class="py-3.5 px-6">ODP & Port</th>
+                                <th class="py-3.5 px-6">Rumah (HP)</th>
+                                <th class="py-3.5 px-6">Estimasi Biaya</th>
+                                <th class="py-3.5 px-6 text-center no-print">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-data" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="empty-state" class="hidden p-12 text-center">
+                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-slate-800">Belum ada data perencanaan</h3>
+                    <p class="text-xs text-slate-500 mt-1">Silakan tambahkan data melalui tombol "Input Perencanaan Baru" di atas.</p>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bg-white border-t border-slate-200 mt-auto py-6 no-print">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+                <p>&copy; 2026 FTTH Infrastructure Planning System.</p>
+                <div class="flex items-center gap-4">
+                    <span class="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Sistem Aktif
+                    </span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- INPUT / EDIT MODAL -->
+    <div id="project-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transform transition-all">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-tower-broadcast" id="modal-icon"></i>
+                    </div>
+                    <div>
+                        <h3 id="modal-title" class="text-lg font-bold text-slate-900">Input Data Perencanaan FTTH</h3>
+                        <p class="text-xs text-slate-500">Rincian spesifikasi kabel, tiang, ODP, dan rumah.</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="ftth-form" onsubmit="saveProject(event)" class="p-6 space-y-4">
+                <input type="hidden" id="project-id">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Nama Pembuat <span class="text-red-500">*</span></label>
+                        <input type="text" id="creator-name" required placeholder="Contoh: Rahmat Hidayat"
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Tanggal Perencanaan <span class="text-red-500">*</span></label>
+                        <input type="date" id="plan-date" required
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Nama Proyek / Cluster <span class="text-red-500">*</span></label>
+                        <input type="text" id="project-name" required placeholder="Contoh: Cluster Mawar Indah"
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Panjang Total Kabel (Meter) <span class="text-red-500">*</span></label>
+                        <input type="number" id="cable-length" min="1" required placeholder="Contoh: 2500"
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Jumlah Tiang (Batang) <span class="text-red-500">*</span></label>
+                        <input type="number" id="pole-count" min="0" required placeholder="Contoh: 45"
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Jumlah Unit ODP <span class="text-red-500">*</span></label>
+                        <input type="number" id="odp-count" min="0" required placeholder="Contoh: 8"
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Kapasitas Port ODP <span class="text-red-500">*</span></label>
+                        <select id="odp-port" required
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                            <option value="ODP 8 Port">ODP 8 Port</option>
+                            <option value="ODP 16 Port" selected>ODP 16 Port</option>
+                            <option value="ODP 24 Port">ODP 24 Port</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Jumlah Rumah / Home Pass (HP) <span class="text-red-500">*</span></label>
+                        <input type="number" id="home-pass" min="1" required placeholder="Contoh: 120"
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Estimasi Total Biaya (Rp) <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 text-sm font-semibold">Rp</span>
+                            <input type="number" id="budget" min="0" required placeholder="Contoh: 35000000"
+                                class="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Catatan / Keterangan Jalur</label>
+                    <textarea id="notes" rows="2" placeholder="Titik hubung OLT, kendala penarikan kabel, jenis tiang (beton/besi)..."
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition resize-none"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModal()" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-lg shadow-blue-500/20 transition">
+                        Simpan Perencanaan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DETAIL MODAL -->
+    <div id="detail-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all">
+            <div class="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 text-white flex justify-between items-center">
+                <div>
+                    <span class="text-xs font-medium text-blue-200 uppercase tracking-wider">Detail Perencanaan Infrastruktur</span>
+                    <h3 id="detail-project-title" class="text-xl font-bold mt-1">Nama Cluster</h3>
+                </div>
+                <button onclick="closeDetailModal()" class="w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 transition flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 text-sm">
+                <div class="grid grid-cols-2 gap-4 pb-3 border-b border-slate-100">
+                    <div>
+                        <p class="text-xs text-slate-400">Nama Pembuat</p>
+                        <p id="detail-creator" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Tanggal Perencanaan</p>
+                        <p id="detail-date" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 pb-3 border-b border-slate-100">
+                    <div>
+                        <p class="text-xs text-slate-400">Panjang Kabel</p>
+                        <p id="detail-cable" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Jumlah Tiang</p>
+                        <p id="detail-pole" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 pb-3 border-b border-slate-100">
+                    <div>
+                        <p class="text-xs text-slate-400">Jumlah & Tipe ODP</p>
+                        <p id="detail-odp" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Jumlah Rumah (HP)</p>
+                        <p id="detail-hp" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 pb-3 border-b border-slate-100">
+                    <div>
+                        <p class="text-xs text-slate-400">Estimasi Biaya Total</p>
+                        <p id="detail-budget" class="font-semibold text-emerald-600 mt-0.5 text-base">-</p>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Catatan / Keterangan</p>
+                    <p id="detail-notes" class="bg-slate-50 p-3 rounded-xl text-slate-700 mt-1 italic">-</p>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <button onclick="closeDetailModal()" class="px-5 py-2 rounded-xl bg-slate-800 text-white font-medium text-sm hover:bg-slate-900 transition">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let infraChartInstance = null;
+        let odpChartInstance = null;
+
+        const VALID_USER = "admin";
+        const VALID_PASS = "ftth2026";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthStatus();
+            document.getElementById('plan-date').valueAsDate = new Date();
+        });
+
+        function checkAuthStatus() {
+            const isLogged = localStorage.getItem('ftth_infra_logged');
+            const loginScreen = document.getElementById('login-screen');
+            const appContainer = document.getElementById('app-container');
+
+            if (isLogged === 'true') {
+                loginScreen.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                appContainer.classList.add('flex');
+                loadProjects();
+            } else {
+                loginScreen.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                appContainer.classList.remove('flex');
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value;
+            const err = document.getElementById('login-error');
+
+            if (u === VALID_USER && p === VALID_PASS) {
+                localStorage.setItem('ftth_infra_logged', 'true');
+                err.classList.add('hidden');
+                checkAuthStatus();
+                showToast('Login berhasil!', 'success');
+            } else {
+                err.innerText = 'Username atau password salah!';
+                err.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            if (confirm('Keluar dari sesi aplikasi?')) {
+                localStorage.removeItem('ftth_infra_logged');
+                checkAuthStatus();
+                showToast('Anda telah keluar.', 'info');
+            }
+        }
+
+        function getProjects() {
+            const data = localStorage.getItem('ftth_infra_projects');
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveProjects(arr) {
+            localStorage.setItem('ftth_infra_projects', JSON.stringify(arr));
+        }
+
+        function openModal(id = null) {
+            const modal = document.getElementById('project-modal');
+            const form = document.getElementById('ftth-form');
+            form.reset();
+            document.getElementById('project-id').value = '';
+            document.getElementById('modal-title').innerText = 'Input Data Perencanaan FTTH';
+            document.getElementById('modal-icon').className = 'fa-solid fa-tower-broadcast';
+            document.getElementById('plan-date').valueAsDate = new Date();
+
+            if (id !== null) {
+                const projects = getProjects();
+                const p = projects.find(item => item.id === id);
+                if (p) {
+                    document.getElementById('modal-title').innerText = 'Edit Data Perencanaan';
+                    document.getElementById('modal-icon').className = 'fa-solid fa-pen-to-square';
+                    document.getElementById('project-id').value = p.id;
+                    document.getElementById('creator-name').value = p.creator;
+                    document.getElementById('plan-date').value = p.date;
+                    document.getElementById('project-name').value = p.name;
+                    document.getElementById('cable-length').value = p.cable;
+                    document.getElementById('pole-count').value = p.pole;
+                    document.getElementById('odp-count').value = p.odp;
+                    document.getElementById('odp-port').value = p.odpPort;
+                    document.getElementById('home-pass').value = p.hp;
+                    document.getElementById('budget').value = p.budget;
+                    document.getElementById('notes').value = p.notes || '';
+                }
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('project-modal').classList.add('hidden');
+        }
+
+        function saveProject(event) {
+            event.preventDefault();
+            const id = document.getElementById('project-id').value;
+            const creator = document.getElementById('creator-name').value.trim();
+            const date = document.getElementById('plan-date').value;
+            const name = document.getElementById('project-name').value.trim();
+            const cable = Number(document.getElementById('cable-length').value);
+            const pole = Number(document.getElementById('pole-count').value);
+            const odp = Number(document.getElementById('odp-count').value);
+            const odpPort = document.getElementById('odp-port').value;
+            const hp = Number(document.getElementById('home-pass').value);
+            const budget = Number(document.getElementById('budget').value);
+            const notes = document.getElementById('notes').value.trim();
+
+            let projects = getProjects();
+
+            if (id) {
+                projects = projects.map(p => p.id == id ? { id: Number(id), creator, date, name, cable, pole, odp, odpPort, hp, budget, notes } : p);
+                showToast('Data berhasil diperbarui!', 'success');
+            } else {
+                const newProj = { id: Date.now(), creator, date, name, cable, pole, odp, odpPort, hp, budget, notes };
+                projects.push(newProj);
+                showToast('Data baru berhasil disimpan!', 'success');
+            }
+
+            saveProjects(projects);
+            closeModal();
+            loadProjects();
+        }
+
+        function deleteProject(id) {
+            if (confirm('Hapus data perencanaan ini?')) {
+                let projects = getProjects();
+                projects = projects.filter(p => p.id !== id);
+                saveProjects(projects);
+                loadProjects();
+                showToast('Data berhasil dihapus.', 'info');
+            }
+        }
+
+        function viewDetail(id) {
+            const projects = getProjects();
+            const p = projects.find(item => item.id === id);
+            if (p) {
+                document.getElementById('detail-project-title').innerText = p.name;
+                document.getElementById('detail-creator').innerText = p.creator;
+                document.getElementById('detail-date').innerText = formatDate(p.date);
+                document.getElementById('detail-cable').innerText = p.cable.toLocaleString('id-ID') + ' Meter';
+                document.getElementById('detail-pole').innerText = p.pole.toLocaleString('id-ID') + ' Batang';
+                document.getElementById('detail-odp').innerText = `${p.odp} Unit (${p.odpPort})`;
+                document.getElementById('detail-hp').innerText = p.hp.toLocaleString('id-ID') + ' Rumah';
+                document.getElementById('detail-budget').innerText = formatRupiah(p.budget);
+                document.getElementById('detail-notes').innerText = p.notes || 'Tidak ada catatan.';
+                document.getElementById('detail-modal').classList.remove('hidden');
+            }
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        function formatRupiah(num) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm transform translate-y-2 opacity-0 transition duration-300`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i><span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function filterData() {
+            const keyword = document.getElementById('search-input').value.toLowerCase();
+            const projects = getProjects();
+            const filtered = projects.filter(p => 
+                p.name.toLowerCase().includes(keyword) || 
+                p.creator.toLowerCase().includes(keyword) ||
+                p.odpPort.toLowerCase().includes(keyword)
+            );
+            renderTable(filtered);
+        }
+
+        function loadProjects() {
+            const projects = getProjects();
+            renderTable(projects);
+            updateStatistics(projects);
+            updateCharts(projects);
+        }
+
+        function renderTable(projects) {
+            const tbody = document.getElementById('table-data');
+            const emptyState = document.getElementById('empty-state');
+            tbody.innerHTML = '';
+
+            if (projects.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            projects.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition duration-150';
+                tr.innerHTML = `
+                    <td class="py-4 px-6 text-xs text-slate-500 font-medium">${index + 1}</td>
+                    <td class="py-4 px-6">
+                        <div class="font-semibold text-slate-900">${p.creator}</div>
+                        <div class="text-xs text-slate-400 mt-0.5">${formatDate(p.date)}</div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="font-bold text-slate-900">${p.name}</div>
+                        ${p.notes ? `<div class="text-xs text-slate-400 truncate max-w-xs mt-0.5">${p.notes}</div>` : ''}
+                    </td>
+                    <td class="py-4 px-6 font-medium text-slate-700">${p.cable.toLocaleString('id-ID')} m</td>
+                    <td class="py-4 px-6 font-medium text-slate-700">${p.pole.toLocaleString('id-ID')} btg</td>
+                    <td class="py-4 px-6">
+                        <span class="font-semibold text-purple-700">${p.odp} Unit</span>
+                        <div class="text-xs text-slate-400">${p.odpPort}</div>
+                    </td>
+                    <td class="py-4 px-6 font-bold text-blue-600">${p.hp.toLocaleString('id-ID')} HP</td>
+                    <td class="py-4 px-6 font-semibold text-emerald-600">${formatRupiah(p.budget)}</td>
+                    <td class="py-4 px-6 text-center no-print">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="viewDetail(${p.id})" title="Lihat Detail" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition flex items-center justify-center">
+                                <i class="fa-solid fa-eye text-xs"></i>
+                            </button>
+                            <button onclick="openModal(${p.id})" title="Edit" class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition flex items-center justify-center">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="deleteProject(${p.id})" title="Hapus" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition flex items-center justify-center">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateStatistics(projects) {
+            const totalProj = projects.length;
+            const totalPole = projects.reduce((sum, p) => sum + Number(p.pole), 0);
+            const totalOdp = projects.reduce((sum, p) => sum + Number(p.odp), 0);
+            const totalCable = projects.reduce((sum, p) => sum + Number(p.cable), 0);
+            const totalHp = projects.reduce((sum, p) => sum + Number(p.hp), 0);
+            const totalBudget = projects.reduce((sum, p) => sum + Number(p.budget), 0);
+
+            document.getElementById('stat-total-project').innerText = totalProj;
+            document.getElementById('stat-total-pole-odp',).innerText = `${totalPole.toLocaleString('id-ID')} / ${totalOdp.toLocaleString('id-ID')}`;
+            document.getElementById('stat-total-cable-hp').innerText = `${totalCable.toLocaleString('id-ID')} m / ${totalHp.toLocaleString('id-ID')} HP`;
+            document.getElementById('stat-total-budget').innerText = formatRupiah(totalBudget);
+        }
+
+        function updateCharts(projects) {
+            const infraCtx = document.getElementById('infrastructureChart').getContext('2d');
+            const odpCtx = document.getElementById('odpChart').getContext('2d');
+
+            const names = projects.map(p => p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name);
+            const hpVals = projects.map(p => p.hp);
+            const odpVals = projects.map(p => p.odp);
+
+            if (infraChartInstance) infraChartInstance.destroy();
+            infraChartInstance = new Chart(infraCtx, {
+                type: 'bar',
+                data: {
+                    labels: names,
+                    datasets: [
+                        {
+                            label: 'Home Pass (Rumah)',
+                            data: hpVals,
+                            backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Jumlah ODP',
+                            data: odpVals,
+                            backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.5)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            let portCounts = { 'ODP 8 Port': 0, 'ODP 16 Port': 0, 'ODP 24 Port': 0 };
+            projects.forEach(p => {
+                if (portCounts[p.odpPort] !== undefined) {
+                    portCounts[p.odpPort] += Number(p.odp);
+                }
+            });
+
+            if (odpChartInstance) odpChartInstance.destroy();
+            odpChartInstance = new Chart(odpCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ODP 8 Port', 'ODP 16 Port', 'ODP 24 Port'],
+                    datasets: [{
+                        data: [portCounts['ODP 8 Port'], portCounts['ODP 16 Port'], portCounts['ODP 24 Port']],
+                        backgroundColor: ['#3b82f6', '#8b5cf6', '#06b6d4'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function exportToCSV() {
+            const projects = getProjects();
+            if (projects.length === 0) {
+                showToast('Tidak ada data untuk diexport.', 'info');
+                return;
+            }
+
+            let csv = "data:text/csv;charset=utf-8,";
+            csv += "No,Nama Pembuat,Tanggal,Cluster,Panjang Kabel (m),Jumlah Tiang,Jumlah ODP,Tipe Port ODP,Home Pass (Rumah),Anggaran (Rp),Catatan\r\n";
+
+            projects.forEach((p, i) => {
+                let row = [
+                    i + 1,
+                    `"${p.creator}"`,
+                    p.date,
+                    `"${p.name}"`,
+                    p.cable,
+                    p.pole,
+                    p.odp,
+                    `"${p.odpPort}"`,
+                    p.hp,
+                    p.budget,
+                    `"${p.notes || ''}"`
+                ];
+                csv += row.join(",") + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csv);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `laporan_ftth_infrastruktur_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Laporan berhasil diexport ke CSV!', 'success');
+        }
+    </script>
+</body>
+</html>
